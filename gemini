@@ -1,0 +1,118 @@
+🚀 'Friendship FUSE' 상세 기능 명세서 (P0 - MVP) 초안
+교수님 예시(P0, P1, UIUX 등)의 구조를 빌려서 FUSE 프로젝트의 핵심 기능을 재구성해 보았습니다. 이 내용을 바탕으로 팀원들과 살을 붙여나가시면 됩니다.
+
+P0 (Core Features - MVP)
+MVP(Minimum Viable Product, 최소 기능 제품)는 핵심 가설("AI가 교집합 믹스를 만들어주면 사용자가 만족할 것이다")을 검증하기 위한 최소한의 기능입니다. 학생팀 기획서의 (1), (2), (3)번 기능이 여기에 해당합니다.
+
+1. FUSE 믹스 생성 세션 시작 (링크 공유)
+[User Story] 사용자는(User A) 함께 믹스를 만들 친구(User B)를 초대하기 위한 고유한 링크를 생성하고 공유할 수 있다.
+
+[Spec]
+
+클라이언트(웹): 메인 화면의 'FUSE 믹스 만들기' 버튼 클릭.
+
+API 호출 (Backend): POST /api/fuse/session/create
+
+서버 응답: 고유한 세션 ID(sessionId)가 포함된 URL(예: https://fuse.app/join?session=abc123)을 생성하여 클라이언트에 반환.
+
+클라이언트(웹): 반환된 URL을 "링크 복사하기" 또는 "공유하기" 기능으로 User A에게 제공.
+
+User A는 이 링크를 User B에게 카톡 등으로 공유.
+
+2. 취향 데이터 입력 및 분석 (AI 호출)
+[User Story] 초대를 받은 사용자(User B)와 초대한 사용자(User A)는 각자 자신의 음악 취향 데이터(예: 좋아하는 아티스트 5명)를 입력하고, AI가 이를 분석하여 유사도를 계산한다.
+
+[Spec]
+
+클라이언트(웹): User B가 공유받은 링크(.../join?session=abc123)에 접속.
+
+클라이언트(웹): User A와 User B는 각자의 화면에서 '좋아하는 아티스트'를 입력하는 폼(Form)을 보게 됨. (MVP에서는 Spotify/Apple Music 연동 대신 수동 입력으로 단순화)
+
+API 호출 (Backend):
+
+User A가 입력 완료 시: POST /api/fuse/session/{sessionId}/submit (Body: {"user": "A", "artists": ["A", "B", "C"]})
+
+User B가 입력 완료 시: POST /api/fuse/session/{sessionId}/submit (Body: {"user": "B", "artists": ["D", "E", "F"]})
+
+서버 (AI 호출): A와 B의 데이터가 모두 submit되면, 서버는 Gemini API를 호출.
+
+[핵심] Gemini Prompt (예시):
+
+"User A likes [A, B, C] and User B likes [D, E, F].
+1. Calculate their taste similarity (0-100%).
+2. Generate a 10-song "FUSE Mix" playlist that both would enjoy.
+3. Create a fun title and short description for this mix.
+Return this as a JSON object: {"similarity": %, "mix": [...], "title": "...", "description": "..."}"
+서버 (DB 저장): Gemini로부터 받은 JSON 응답 결과를 DB의 Session 테이블에 저장.
+
+3. FUSE 믹스 결과 시각화 (벤 다이어그램)
+[User Story] 두 사용자는 AI가 계산한 '취향 유사도(%)'와 '공동 플레이리스트(FUSE Mix)'를 시각적으로(벤 다이어그램) 한눈에 볼 수 있다.
+
+[Spec]
+
+클라이언트(웹): 서버에 submit 후, '분석 중...' 로딩 스피너 표시.
+
+클라이언트(웹): 1-2초 간격으로 GET /api/fuse/session/{sessionId}/result API를 주기적으로 호출(Polling).
+
+서버 응답: AI 분석이 완료되어 DB에 결과가 저장되었다면, 저장된 JSON 데이터(유사도, 믹스, 제목 등)를 반환. (완료 전이면 {"status": "pending"} 반환)
+
+클라이언트(웹 - 렌더링):
+
+데이터를 받으면 로딩 스피너를 숨김.
+
+similarity 값을 사용하여 벤 다이어그램 UI를 렌더링 (예: CSS로 원 두 개 겹치기).
+
+title, description을 상단에 표시.
+
+mix (곡 리스트)를 하단에 표시.
+
+P1 (Future Expansion)
+지금 당장 만들진 않지만, MVP 성공 후 추가할 기능들입니다.
+
+사용자 인증 (User Auth): 기획서의 '프리미엄 구독'이나 '기록 동기화'를 위한 소셜 로그인 기능 (P0에서는 불필요함).
+
+스트리밍 서비스 연동: 수동으로 아티스트를 입력하는 대신, Spotify/Apple Music API와 직접 연동하여 사용자의 실제 청취 데이터를 가져오는 기능.
+
+FUSE Mix 저장/내보내기: 생성된 믹스를 사용자의 Spotify/Apple Music 계정 플레이리스트로 저장해주는 기능.
+
+UI/UX 요구사항 (FUSE Ver.)
+교수님 예시의 "집중(Focus)" Vibe를 FUSE 프로젝트에 맞게 재정의해야 합니다.
+
+UX/UI Vibe 원칙: "연결 (Connect) & 재미 (Fun)"
+
+1. 미니멀리즘 vs. 브랜딩: 예시처럼 흑백일 필요는 없습니다. FUSE의 정체성을 보여주는 생동감 있는 메인 컬러 (예: 두 색이 섞이는 그라데이션)를 사용하는 것이 좋습니다.
+
+2. 가독성 (Readability):
+
+Fonts: 생성된 믹스 제목(스토리텔링)은 재미있거나 감성적인 폰트 (Serif 또는 Script 계열)를, 곡 목록은 정보 전달에 충실한 폰트 (Sans-serif)를 사용.
+
+3. 방해 요소 최소화 (Non-distraction):
+
+Animation: 벤 다이어그램이 '스르륵' 겹쳐지거나, 유사도 % 숫자가 카운트 업되는 핵심적인 애니메이션은 사용자의 재미(Fun)를 위해 P0에 포함하는 것이 좋음.
+
+기타 체크리스트 (Tech Specs)
+이 부분은 학생팀 기획서에 이미 잘 정리되어 있습니다. 여기에 교수님 예시처럼 API 엔드포인트와 데이터 모델만 추가하면 완벽합니다.
+
+주요 API 엔드포인트 (API Endpoints): (위 P0 스펙에서 정의한 것들)
+
+POST /api/fuse/session/create: 새 믹스 세션 생성 및 공유 URL 반환
+
+POST /api/fuse/session/{sessionId}/submit: 사용자의 취향 데이터 제출
+
+GET /api/fuse/session/{sessionId}/result: AI 분석 결과 요청 (클라이언트가 주기적으로 호출)
+
+핵심 데이터 모델 (DB Schema): (간단한 예시)
+
+Session (Table)
+
+id (pk, string, 예: 'abc123')
+
+userA_data (json, 예: {"artists": [...]})
+
+userB_data (json)
+
+result (json, 예: {"similarity": 45, "mix": [...]})
+
+status (string, 예: 'pending', 'complete')
+
+createdAt (timestamp)
