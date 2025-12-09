@@ -59,7 +59,6 @@ npm install
 ### 3. 환경 변수 설정 (Environment Setup)
 프로젝트 루트(project/)에 .env.local 파일을 생성하고, Google Gemini API 키를 입력합니다.
 
-코드 스니펫
 # .env.local
 GEMINI_API_KEY=your_google_api_key_here
 
